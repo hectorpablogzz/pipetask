@@ -30,6 +30,17 @@ export function defaultState(): AppState {
   }
 }
 
+export function addProject(state: AppState, name: string): AppState {
+  const id = crypto.randomUUID()
+  return {
+    activeProjectId: id,
+    projects: {
+      ...state.projects,
+      [id]: { id, name, pipeline: [], backlog: [], cancelled: [] },
+    },
+  }
+}
+
 function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }

@@ -1,0 +1,35 @@
+{
+  "generation_hash": "819364f199c0969bd598",
+  "inputs": {
+    "jinja2_version": "3.1.6",
+    "project_root": "/Users/hectorpablogonzalez/vscode/pipetask",
+    "renderer_sha256": "a622fd5d9f633690323bdecf6cc9dc28625ef0d7b9d971fcc3cd101ed271fa19",
+    "resolved_values": {
+      "customization.workflow.on_activation": "",
+      "customization.workflow.on_block_activation": "",
+      "customization.workflow.on_block_complete": "",
+      "customization.workflow.on_complete": "",
+      "customization.workflow.persistent_facts": []
+    },
+    "skill_root": "/Users/hectorpablogonzalez/vscode/pipetask/.agents/skills/bmad-walkthrough",
+    "source_sha256": {
+      "step-01-orientation.md": "6ba18633dd1f0cb83f9b76c83dd9b4632405372d1bbe3cbc76ddb2dd5532fe9f",
+      "step-02-narrative.md": "1249d301e816ff85350fc43308498a3d7089659ae98bf428273599add71eb6ca",
+      "step-03-walkthrough.md": "32fd4ffab64e1829789f941e37ce830c95257bf6ed5d5a8ae539ec3a564945f9",
+      "templates/log-template.md": "ebf59c7f6a85dfccea6f580e8a35363a0a8641e66067427ec803592d297ae770",
+      "workflow.md": "6cc2c3d2ffde4eb4c0461c508add74048ce9a811c21184400c98f2ecc4c9cdde"
+    }
+  },
+  "outputs": {
+    "step-01-orientation.md": "1613c9ff1f22a351b1fe73208a0e87b64318ee7ac6a26e3ef804f933a6974600",
+    "step-02-narrative.md": "ac4705344e4a91ad210a7dfaa989b83ec77cabb7b277d16cebf03723bff1c903",
+    "step-03-walkthrough.md": "ef6e6e7dcef093956467175db9e24ae4b49f3ac7817a9d4b0b86db17deb48bea",
+    "templates/log-template.md": "e4992dcf11a8c0c798c8f63c75417a8777f2b2c74c1b38bdaf3f676513f0875d",
+    "workflow.md": "b3e7c48e284bec64fe7d572a49a419894bbae86a7d941810c1737ef7ab806651"
+  },
+  "project_root": "/Users/hectorpablogonzalez/vscode/pipetask",
+  "project_slug": "pipetask",
+  "root_hash": "87a7524394c6",
+  "schema_version": 1,
+  "skill": "bmad-walkthrough"
+}

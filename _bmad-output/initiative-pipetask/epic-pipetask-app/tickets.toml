@@ -1,0 +1,100 @@
+[[entry]]
+id = 1
+type = "story"
+title = "Tracer: shell, add task, autosave"
+description = "Replaces the starter page with the app shell, lets the user add a task to a pipeline, and autosaves it in the browser. Defines a project-keyed storage model (one default project for now) that stories 2 to 7 build on."
+verify = "Add a task, reload the page, and the task is still listed; the deployed site shows it too."
+covers = ["CAP-1", "CAP-8"]
+after = ["2.2"]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 2
+type = "story"
+title = "Multiple projects"
+description = "Lets the user create and switch projects, each holding its own pipeline, backlog, and cancelled tasks."
+verify = "Tasks added in project A do not appear in project B, and both survive reload."
+covers = ["CAP-9"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Edit and delete tasks"
+description = "Lets the user modify a task's text and delete a task permanently."
+verify = "An edited task shows its new text and a deleted task is gone, both after reload."
+covers = ["CAP-1"]
+after = [1]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Complete tasks with feedback"
+description = "Adds the pending and completed states, shows positive feedback when a task is completed, and lets the user revert a completed task to pending."
+verify = "Completing a task marks it completed and shows the feedback; reverting returns it to pending; no third state exists."
+covers = ["CAP-3", "CAP-2"]
+after = [1]
+hitl = false
+risk = "low"
+notes = ["Form of the feedback is the builder's choice."]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Reorder pipeline by drag-and-drop"
+description = "Lets the user drag a pipeline task to a new position and keeps the new order."
+verify = "Dragging a task, by mouse or touch, changes the order shown, and the order holds after reload."
+covers = ["CAP-4"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Backlog box"
+description = "Adds a per-project backlog box at the bottom right. The user can create tasks directly in it, drag a pipeline task into it, reorder tasks within it, and drag its tasks into the pipeline."
+verify = "A task created in the backlog or dragged from the pipeline appears there; one dragged out appears in the pipeline; backlog order and contents hold after reload; works by mouse and touch; the box sits bottom-right."
+covers = ["CAP-6"]
+after = [2, 5]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Cancelled tasks box"
+description = "Adds a per-project cancelled box at the bottom left. Dragging a task there cancels it from the pipeline, from the backlog, or while completed; dragging it out restores it; tasks can be reordered within the box."
+verify = "A task dragged to the box from the pipeline, backlog or completed state lists there; dragging it out returns it; cancelled order and contents hold after reload; works by mouse and touch; the box sits bottom-left."
+covers = ["CAP-7"]
+after = [2, 5, 6]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 8
+type = "story"
+title = "All-done celebration"
+description = "Shows a celebratory notification when every pipeline task is completed (the pipeline holds at least one task). Deleting, cancelling, or adding tasks re-evaluates this."
+verify = "Completing the final pending task shows it; completing an earlier task, or emptying the pipeline by delete or cancel, does not."
+covers = ["CAP-5"]
+after = [3, 4, 6, 7]
+hitl = false
+risk = "low"
+notes = ["Form of the celebration is the builder's choice."]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Refactor sweep"
+description = "Cleans up the code across the epic's stories and deferred review findings; cleanup only."
+verify = "Build and lint pass and behavior of every earlier story is unchanged."
+covers = []
+after = [2, 3, 4, 5, 6, 7, 8]
+hitl = false
+risk = "low"

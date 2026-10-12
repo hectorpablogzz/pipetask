@@ -1,0 +1,23 @@
+[[entry]]
+id = 1
+type = "story"
+title = "CI runs lint and build"
+description = "Runs lint and the production build on every push and shows failures. Covers B1."
+verify = "A push with a lint error fails the check; a clean push passes."
+covers = []
+after = []
+hitl = true
+risk = "low"
+unknown = "Which CI service to use (the repo has no remote or CI config yet)."
+
+[[entry]]
+id = 2
+type = "story"
+title = "Deploy to a public URL"
+description = "Deploys the production build to a public URL on every merge to main. Covers B2."
+verify = "A merge to main updates the page at the public URL."
+covers = []
+after = [1]
+hitl = true
+risk = "medium"
+unknown = "Which hosting target to deploy to, and whether the URL needs a base path."

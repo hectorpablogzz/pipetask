@@ -120,3 +120,34 @@
     cursor: pointer;
   }
 }
+
+.edit-task,
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    font: inherit;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    color: var(--text-h);
+    background: var(--bg);
+  }
+
+  button {
+    font: inherit;
+    padding: 2px 10px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    color: var(--accent);
+    background: var(--accent-bg);
+    cursor: pointer;
+  }
+}
+
+.edit-task {
+  flex: 1;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { addProject, loadState, saveState, type AppState } from './storage'
+import { addProject, loadState, saveState, type AppState, type Task } from './storage'
 import { supabase } from './supabase'
 import { useSession } from './useSession'
 import Login from './Login'
@@ -9,6 +9,8 @@ function Shell({ userId, label }: { userId: string; label: string }) {
   const [state, setState] = useState<AppState>(() => loadState(userId))
   const [title, setTitle] = useState('')
   const [projectName, setProjectName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
 
   useEffect(() => {
     saveState(userId, state)
@@ -24,27 +26,48 @@ function Shell({ userId, label }: { userId: string; label: string }) {
     setProjectName('')
   }
 
-  function addTask(e: React.FormEvent) {
-    e.preventDefault()
-    const trimmed = title.trim()
-    if (!trimmed) return
+  function updatePipeline(fn: (pipeline: Task[]) => Task[]) {
     setState((prev) => {
       const current = prev.projects[prev.activeProjectId]
       return {
         ...prev,
         projects: {
           ...prev.projects,
-          [current.id]: {
-            ...current,
-            pipeline: [
-              ...current.pipeline,
-              { id: crypto.randomUUID(), title: trimmed, state: 'pending' },
-            ],
-          },
+          [current.id]: { ...current, pipeline: fn(current.pipeline) },
         },
       }
     })
+  }
+
+  function addTask(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = title.trim()
+    if (!trimmed) return
+    updatePipeline((p) => [
+      ...p,
+      { id: crypto.randomUUID(), title: trimmed, state: 'pending' },
+    ])
     setTitle('')
+  }
+
+  function startEdit(task: Task) {
+    setEditingId(task.id)
+    setEditText(task.title)
+  }
+
+  function saveEdit(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = editText.trim()
+    if (!trimmed) return
+    updatePipeline((p) =>
+      p.map((t) => (t.id === editingId ? { ...t, title: trimmed } : t)),
+    )
+    setEditingId(null)
+  }
+
+  function deleteTask(id: string) {
+    updatePipeline((p) => p.filter((t) => t.id !== id))
+    if (editingId === id) setEditingId(null)
   }
 
   return (
@@ -60,9 +83,10 @@ function Shell({ userId, label }: { userId: string; label: string }) {
         <div className="projects">
           <select
             value={state.activeProjectId}
-            onChange={(e) =>
+            onChange={(e) => {
+              setEditingId(null)
               setState((prev) => ({ ...prev, activeProjectId: e.target.value }))
-            }
+            }}
             aria-label="Project"
           >
             {Object.values(state.projects).map((p) => (
@@ -98,8 +122,34 @@ function Shell({ userId, label }: { userId: string; label: string }) {
       <ol className="pipeline">
         {project.pipeline.map((task) => (
           <li key={task.id} className="task" data-state={task.state}>
-            <span className="task-title">{task.title}</span>
-            <span className="task-state">{task.state}</span>
+            {editingId === task.id ? (
+              <form className="edit-task" onSubmit={saveEdit}>
+                <input
+                  type="text"
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  aria-label="Edit task title"
+                  autoFocus
+                />
+                <button type="submit">Save</button>
+                <button type="button" onClick={() => setEditingId(null)}>
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <>
+                <span className="task-title">{task.title}</span>
+                <span className="task-actions">
+                  <span className="task-state">{task.state}</span>
+                  <button type="button" onClick={() => startEdit(task)}>
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => deleteTask(task.id)}>
+                    Delete
+                  </button>
+                </span>
+              </>
+            )}
           </li>
         ))}
       </ol>

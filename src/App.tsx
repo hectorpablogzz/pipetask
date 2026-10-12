@@ -1,9 +1,63 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { addProject, loadState, saveState, type AppState, type Task } from './storage'
 import { supabase } from './supabase'
 import { useSession } from './useSession'
 import Login from './Login'
 import './App.css'
+
+function SortableTask({
+  task,
+  flash,
+  children,
+}: {
+  task: Task
+  flash: boolean
+  children: ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: task.id })
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        position: 'relative',
+        zIndex: isDragging ? 1 : undefined,
+        opacity: isDragging ? 0.85 : undefined,
+      }}
+      className="task"
+      data-state={task.state}
+      data-flash={flash}
+    >
+      <button
+        type="button"
+        className="handle"
+        aria-label="Drag to reorder"
+        {...attributes}
+        {...listeners}
+      >
+        ⠿
+      </button>
+      {children}
+    </li>
+  )
+}
 
 function Shell({ userId, label }: { userId: string; label: string }) {
   const [state, setState] = useState<AppState>(() => loadState(userId))
@@ -85,6 +139,19 @@ function Shell({ userId, label }: { userId: string; label: string }) {
     setFlashId(completing ? task.id : null)
   }
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  )
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return
+    updatePipeline((p) => {
+      const from = p.findIndex((t) => t.id === active.id)
+      const to = p.findIndex((t) => t.id === over.id)
+      return from < 0 || to < 0 ? p : arrayMove(p, from, to)
+    })
+  }
+
   function deleteTask(id: string) {
     updatePipeline((p) => p.filter((t) => t.id !== id))
     if (editingId === id) setEditingId(null)
@@ -143,12 +210,18 @@ function Shell({ userId, label }: { userId: string; label: string }) {
         {flashVisible ? 'Done! 🎉' : ''}
       </p>
 
-      <ol className="pipeline">
-        {project.pipeline.map((task) => (
-          <li key={task.id} className="task"
-            data-state={task.state}
-            data-flash={flashId === task.id}
-          >
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={onDragEnd}
+      >
+        <SortableContext
+          items={project.pipeline.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ol className="pipeline">
+            {project.pipeline.map((task) => (
+              <SortableTask key={task.id} task={task} flash={flashId === task.id}>
             {editingId === task.id ? (
               <form className="edit-task" onSubmit={saveEdit}>
                 <input
@@ -180,9 +253,11 @@ function Shell({ userId, label }: { userId: string; label: string }) {
                 </span>
               </>
             )}
-          </li>
-        ))}
-      </ol>
+              </SortableTask>
+            ))}
+          </ol>
+        </SortableContext>
+      </DndContext>
     </main>
   )
 }

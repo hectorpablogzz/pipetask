@@ -82,6 +82,7 @@
 }
 
 .task-title {
+  flex: 1;
   color: var(--text-h);
 }
 
@@ -170,4 +171,14 @@
   100% {
     background: transparent;
   }
+}
+
+.handle {
+  font: inherit;
+  padding: 0 6px;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: grab;
+  touch-action: none;
 }

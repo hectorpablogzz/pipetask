@@ -151,3 +151,23 @@
 .edit-task {
   flex: 1;
 }
+
+.feedback {
+  color: #16a34a;
+  font-weight: 600;
+  min-height: 1.5em;
+  margin: 0 0 12px;
+}
+
+.task[data-flash='true'] {
+  animation: pulse 1.2s ease-out;
+}
+
+@keyframes pulse {
+  0% {
+    background: rgba(22, 163, 74, 0.35);
+  }
+  100% {
+    background: transparent;
+  }
+}

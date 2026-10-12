@@ -11,12 +11,20 @@ function Shell({ userId, label }: { userId: string; label: string }) {
   const [projectName, setProjectName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [flashId, setFlashId] = useState<string | null>(null)
 
   useEffect(() => {
     saveState(userId, state)
   }, [userId, state])
 
+  useEffect(() => {
+    if (!flashId) return
+    const t = setTimeout(() => setFlashId(null), 1200)
+    return () => clearTimeout(t)
+  }, [flashId])
+
   const project = state.projects[state.activeProjectId]
+  const flashVisible = project.pipeline.some((t) => t.id === flashId)
 
   function createProject(e: React.FormEvent) {
     e.preventDefault()
@@ -63,6 +71,18 @@ function Shell({ userId, label }: { userId: string; label: string }) {
       p.map((t) => (t.id === editingId ? { ...t, title: trimmed } : t)),
     )
     setEditingId(null)
+  }
+
+  function toggleTask(task: Task) {
+    const completing = task.state === 'pending'
+    updatePipeline((p) =>
+      p.map((t) =>
+        t.id === task.id
+          ? { ...t, state: completing ? 'completed' : 'pending' }
+          : t,
+      ),
+    )
+    setFlashId(completing ? task.id : null)
   }
 
   function deleteTask(id: string) {
@@ -119,9 +139,16 @@ function Shell({ userId, label }: { userId: string; label: string }) {
         <button type="submit">Add</button>
       </form>
 
+      <p className="feedback" role="status">
+        {flashVisible ? 'Done! 🎉' : ''}
+      </p>
+
       <ol className="pipeline">
         {project.pipeline.map((task) => (
-          <li key={task.id} className="task" data-state={task.state}>
+          <li key={task.id} className="task"
+            data-state={task.state}
+            data-flash={flashId === task.id}
+          >
             {editingId === task.id ? (
               <form className="edit-task" onSubmit={saveEdit}>
                 <input
@@ -141,6 +168,9 @@ function Shell({ userId, label }: { userId: string; label: string }) {
                 <span className="task-title">{task.title}</span>
                 <span className="task-actions">
                   <span className="task-state">{task.state}</span>
+                  <button type="button" onClick={() => toggleTask(task)}>
+                    {task.state === 'pending' ? 'Complete' : 'Revert'}
+                  </button>
                   <button type="button" onClick={() => startEdit(task)}>
                     Edit
                   </button>

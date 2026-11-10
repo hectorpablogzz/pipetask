@@ -1,0 +1,13 @@
+diff --git a/src/tasks.ts b/src/tasks.ts
+index 6a54bf3..4e01d01 100644
+--- a/src/tasks.ts
++++ b/src/tasks.ts
+@@ -19,7 +19,7 @@ export function toggleTaskState(tasks: Task[], id: string): Task[] {
+ }
+ 
+ export function removeTask(tasks: Task[], id: string): Task[] {
+-  return tasks.filter((t) => t.id !== id)
++  return tasks.filter((t) => t.id === id)
+ }
+ 
+ export function moveTask(tasks: Task[], fromId: string, toId: string): Task[] {

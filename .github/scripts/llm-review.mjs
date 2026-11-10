@@ -58,11 +58,22 @@ Respond in Markdown with exactly these sections:
 
 const user = `Review this diff${truncated ? ' (truncated to the first ' + MAX_DIFF_CHARS + ' characters)' : ''}.\n<diff>\n${diff}\n</diff>`
 
-let text
-try {
+const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite'
+const RETRYABLE = new Set([429, 500, 502, 503, 504])
+const ATTEMPTS_PER_MODEL = 3
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+class ApiError extends Error {
+  constructor(message, retryable) {
+    super(message)
+    this.retryable = retryable
+  }
+}
+
+async function callGemini(modelName) {
   // Key goes in a header (not the URL) so it cannot leak into logs or proxies.
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey },
@@ -77,22 +88,47 @@ try {
   if (!res.ok) {
     // Status and error status only; never echo the full body.
     const body = await res.json().catch(() => ({}))
-    throw new Error(`Gemini API returned ${res.status}: ${body?.error?.status ?? 'unknown_error'}`)
+    throw new ApiError(
+      `Gemini API (${modelName}) returned ${res.status}: ${body?.error?.status ?? 'unknown_error'}`,
+      RETRYABLE.has(res.status),
+    )
   }
   const data = await res.json()
   if (data.promptFeedback?.blockReason) {
-    throw new Error(`Gemini blocked the prompt: ${data.promptFeedback.blockReason}`)
+    throw new ApiError(`Gemini blocked the prompt: ${data.promptFeedback.blockReason}`, false)
   }
-  text = (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('\n').trim()
-  if (!text) throw new Error('Gemini API returned no text content')
-} catch (err) {
-  const msg = `LLM review could not be completed: ${err.message}`
+  const out = (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('\n').trim()
+  if (!out) throw new ApiError(`Gemini API (${modelName}) returned no text content`, true)
+  return out
+}
+
+// Retry transient errors (overload, rate limit) with backoff, then try the fallback model.
+let text
+let usedModel = model
+let lastErr
+const candidates = fallbackModel && fallbackModel !== model ? [model, fallbackModel] : [model]
+outer: for (const m of candidates) {
+  for (let attempt = 1; attempt <= ATTEMPTS_PER_MODEL; attempt++) {
+    try {
+      text = await callGemini(m)
+      usedModel = m
+      break outer
+    } catch (err) {
+      lastErr = err
+      console.log(`Attempt ${attempt}/${ATTEMPTS_PER_MODEL} with ${m} failed: ${err.message}`)
+      if (!(err instanceof ApiError) || !err.retryable) break // try next model / give up
+      if (attempt < ATTEMPTS_PER_MODEL) await sleep(attempt * 10_000)
+    }
+  }
+}
+if (!text) {
+  const msg = `LLM review could not be completed: ${lastErr?.message ?? 'unknown error'}`
   console.log(`::warning::${msg}`)
   summary(`## LLM review\n\n⚠️ ${msg}`)
   process.exit(0) // advisory: an API outage must not block merging
 }
 
-console.log(`\n===== LLM review (${model}) =====\n`)
+console.log(`\n===== LLM review (${usedModel}) =====\n`)
 console.log(text)
 console.log('\n===== end of LLM review =====')
-summary(`## LLM review (${model})\n\n${truncated ? '> Diff was truncated for review.\n\n' : ''}${text}`)
+summary(`## LLM review (${usedModel})\n\n${truncated ? '> Diff was truncated for review.\n\n' : ''}${text}`)

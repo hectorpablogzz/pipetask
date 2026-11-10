@@ -27,7 +27,7 @@ Security design: top-level `permissions: contents: read`; no `pull_request_targe
 
 The two Supabase values are required: `src/supabase.ts` throws at startup if they are missing, so a deploy built without them would be a blank page. They are inlined into the public bundle (the anon key is public by design).
 
-Optional repository **variable** `GEMINI_MODEL` to override the default (`gemini-3.8-flash`). Free-tier model names and rate limits change; if the review step warns about a 404 or 429, pick a currently free model in AI Studio and set this variable.
+Optional repository **variable** `GEMINI_MODEL` to override the default (`gemini-3.8-flash`). The script retries 429/5xx errors 3 times, then falls back to `GEMINI_FALLBACK_MODEL` (default `gemini-3.5-flash-lite`). Free-tier model names and rate limits change; if the review step warns about a 404 or 429, pick a currently free model in AI Studio and set this variable.
 
 ### 2. GitHub `production` environment (recommended)
 Settings → Environments → New environment → `production`. Optionally restrict it to the `main` branch. The deploy job references it.

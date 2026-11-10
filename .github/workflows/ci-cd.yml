@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch: # manual run of the LLM golden-set eval
 
 # Least privilege by default; jobs only get what they need.
 permissions:
@@ -36,7 +37,7 @@ jobs:
         run: npm run build
 
   llm-review:
-    name: LLM diff review
+    name: LLM diff review (gate)
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -51,14 +52,36 @@ jobs:
         with:
           node-version: 22
       - name: Review diff with Gemini
+        # Fails the job only if a verified high-severity finding exists (see CI_CD_SETUP.md).
         # The diff is only passed to the API as data. Nothing from it is executed.
         # SHAs come from the event payload and are validated in the script.
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          REVIEW_STRICT: ${{ vars.REVIEW_STRICT }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node .github/scripts/llm-review.mjs
+        run: node scripts/llm-review/llm-review.mjs
+
+  llm-eval:
+    name: LLM golden-set eval (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Run golden-set eval
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+        run: node scripts/llm-review/eval.mjs
 
   deploy:
     name: Deploy to Netlify (production)

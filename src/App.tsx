@@ -9,12 +9,19 @@ import {
 } from '@dnd-kit/core'
 import {
   SortableContext,
-  arrayMove,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { addProject, loadState, saveState, type AppState, type Task } from './storage'
+import {
+  createTask,
+  moveTask,
+  removeTask,
+  renameTask,
+  toggleTaskState,
+  updateActivePipeline,
+} from './tasks'
 import { supabase } from './supabase'
 import { useSession } from './useSession'
 import Login from './Login'
@@ -89,26 +96,14 @@ function Shell({ userId, label }: { userId: string; label: string }) {
   }
 
   function updatePipeline(fn: (pipeline: Task[]) => Task[]) {
-    setState((prev) => {
-      const current = prev.projects[prev.activeProjectId]
-      return {
-        ...prev,
-        projects: {
-          ...prev.projects,
-          [current.id]: { ...current, pipeline: fn(current.pipeline) },
-        },
-      }
-    })
+    setState((prev) => updateActivePipeline(prev, fn))
   }
 
   function addTask(e: React.FormEvent) {
     e.preventDefault()
-    const trimmed = title.trim()
-    if (!trimmed) return
-    updatePipeline((p) => [
-      ...p,
-      { id: crypto.randomUUID(), title: trimmed, state: 'pending' },
-    ])
+    const task = createTask(title)
+    if (!task) return
+    updatePipeline((p) => [...p, task])
     setTitle('')
   }
 
@@ -121,21 +116,13 @@ function Shell({ userId, label }: { userId: string; label: string }) {
     e.preventDefault()
     const trimmed = editText.trim()
     if (!trimmed) return
-    updatePipeline((p) =>
-      p.map((t) => (t.id === editingId ? { ...t, title: trimmed } : t)),
-    )
+    updatePipeline((p) => renameTask(p, editingId ?? '', trimmed))
     setEditingId(null)
   }
 
   function toggleTask(task: Task) {
     const completing = task.state === 'pending'
-    updatePipeline((p) =>
-      p.map((t) =>
-        t.id === task.id
-          ? { ...t, state: completing ? 'completed' : 'pending' }
-          : t,
-      ),
-    )
+    updatePipeline((p) => toggleTaskState(p, task.id))
     setFlashId(completing ? task.id : null)
   }
 
@@ -145,15 +132,11 @@ function Shell({ userId, label }: { userId: string; label: string }) {
 
   function onDragEnd({ active, over }: DragEndEvent) {
     if (!over || active.id === over.id) return
-    updatePipeline((p) => {
-      const from = p.findIndex((t) => t.id === active.id)
-      const to = p.findIndex((t) => t.id === over.id)
-      return from < 0 || to < 0 ? p : arrayMove(p, from, to)
-    })
+    updatePipeline((p) => moveTask(p, String(active.id), String(over.id)))
   }
 
   function deleteTask(id: string) {
-    updatePipeline((p) => p.filter((t) => t.id !== id))
+    updatePipeline((p) => removeTask(p, id))
     if (editingId === id) setEditingId(null)
   }
 

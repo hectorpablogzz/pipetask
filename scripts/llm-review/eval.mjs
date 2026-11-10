@@ -11,14 +11,18 @@ if (!apiKey) {
   process.exit(1)
 }
 const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
-const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite'
+// Comma-separated list, tried in order after the primary model.
+const fallbackModels = (process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite,gemini-3.6-flash').split(',').map((m) => m.trim()).filter(Boolean)
 const dir = new URL('./golden/', import.meta.url)
 const cases = JSON.parse(readFileSync(new URL('cases.json', dir), 'utf8'))
+// Free-tier limits can be as low as ~5 requests/minute per model; override with EVAL_DELAY_MS.
+const delayMs = Number(process.env.EVAL_DELAY_MS) || 13_000
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+const unhealthy = new Set()
 const runOnce = async (diff) => {
-  await sleep(4000) // stay under free-tier rate limits
-  const { review } = await reviewDiff({ apiKey, model, fallbackModel, diff })
+  await sleep(delayMs) // stay under free-tier requests-per-minute limits
+  const { review } = await reviewDiff({ apiKey, model, fallbackModels, unhealthy, diff })
   return assess(review, diff)
 }
 

@@ -52,7 +52,8 @@ async function callGemini({ apiKey, model, user, useSchema, fetchImpl }) {
 export async function reviewDiff({
   apiKey,
   model,
-  fallbackModel,
+  fallbackModels = [],
+  unhealthy = new Set(), // models that already exhausted retries; shared across calls to skip dead models
   diff,
   truncated = false,
   fetchImpl = fetch,
@@ -62,7 +63,10 @@ export async function reviewDiff({
   backoffMs = 10_000,
 }) {
   const user = buildUserMessage(diff, truncated)
-  const models = fallbackModel && fallbackModel !== model ? [model, fallbackModel] : [model]
+  const all = [...new Set([model, ...fallbackModels].filter(Boolean))]
+  const healthy = all.filter((m) => !unhealthy.has(m))
+  const models = healthy.length ? healthy : all
+  log(`Models to try, in order: ${models.join(' -> ')}`)
   let useSchema = true
   let lastErr
   for (const m of models) {
@@ -84,6 +88,7 @@ export async function reviewDiff({
         }
         if (!err.retryable) break
         if (attempt < attemptsPerModel) await sleep(attempt * backoffMs)
+        else if (err.status) unhealthy.add(m) // API-level failure on every attempt: skip this model next time
       }
     }
   }

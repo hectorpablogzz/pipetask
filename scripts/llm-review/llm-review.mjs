@@ -9,7 +9,8 @@ import { ReviewUnavailable, reviewDiff } from './review-client.mjs'
 
 const apiKey = process.env.GEMINI_API_KEY
 const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
-const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite'
+// Comma-separated list, tried in order after the primary model.
+const fallbackModels = (process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite,gemini-3.6-flash').split(',').map((m) => m.trim()).filter(Boolean)
 const strict = process.env.REVIEW_STRICT === 'true' // fail the job if the review cannot be completed
 const { BASE_SHA: base, HEAD_SHA: head, GITHUB_STEP_SUMMARY: summaryFile } = process.env
 
@@ -42,7 +43,7 @@ if (truncated) diff = diff.slice(0, MAX_DIFF_CHARS)
 
 let result
 try {
-  result = await reviewDiff({ apiKey, model, fallbackModel, diff, truncated })
+  result = await reviewDiff({ apiKey, model, fallbackModels, diff, truncated })
 } catch (err) {
   if (err instanceof ReviewUnavailable) unavailable(`LLM review could not be completed: ${err.message}`)
   throw err

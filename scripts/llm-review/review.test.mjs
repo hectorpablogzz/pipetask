@@ -106,7 +106,7 @@ const ok = (obj) => ({ ok: true, json: async () => ({ candidates: [{ content: { 
 const text = (t) => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: t }] } }] }) })
 const err = (status) => ({ ok: false, status, json: async () => ({ error: { status: 'X' } }) })
 const seq = (...responses) => { const calls = []; const f = async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return responses[Math.min(calls.length - 1, responses.length - 1)] }; f.calls = calls; return f }
-const base = { apiKey: 'k', model: 'm1', fallbackModel: 'm2', diff: bugDiff, sleep: async () => {}, log: () => {} }
+const base = { apiKey: 'k', model: 'm1', fallbackModels: ['m2'], diff: bugDiff, sleep: async () => {}, log: () => {} }
 
 describe('reviewDiff', () => {
   it('requests JSON mode with a schema and a header key', async () => {
@@ -127,6 +127,17 @@ describe('reviewDiff', () => {
     const r = await reviewDiff({ ...base, fetchImpl: f })
     expect(r.model).toBe('m2')
   })
+  it('tries several fallbacks and skips a dead model on the next call', async () => {
+    const unhealthy = new Set()
+    const urlModel = (c) => /models\/([^:]+):/.exec(c.url)[1]
+    const f = seq(err(503), err(503), err(503), err(503), err(503), err(503), ok(review()))
+    const r = await reviewDiff({ ...base, fallbackModels: ['m2', 'm3'], unhealthy, fetchImpl: f })
+    expect(r.model).toBe('m3')
+    expect([...unhealthy].sort()).toEqual(['m1', 'm2'])
+    const g = seq(ok(review()))
+    await reviewDiff({ ...base, fallbackModels: ['m2', 'm3'], unhealthy, fetchImpl: g })
+    expect(urlModel(g.calls[0])).toBe('m3')
+  })
   it('drops responseSchema after a 400 and still validates in code', async () => {
     const f = seq(err(400), ok(review()))
     await reviewDiff({ ...base, fetchImpl: f })
@@ -137,7 +148,7 @@ describe('reviewDiff', () => {
   })
   it('does not retry non-retryable errors (e.g. 403)', async () => {
     const f = seq(err(403))
-    await expect(reviewDiff({ ...base, fallbackModel: undefined, fetchImpl: f })).rejects.toBeInstanceOf(ReviewUnavailable)
+    await expect(reviewDiff({ ...base, fallbackModels: [], fetchImpl: f })).rejects.toBeInstanceOf(ReviewUnavailable)
     expect(f.calls).toHaveLength(1)
   })
 })

@@ -32,7 +32,7 @@ Known limit: a single model call can still miss a bug or, rarely, raise a verifi
 
 ### Tests for the LLM layer
 - **Offline, every run (`npm test`)**: `scripts/llm-review/review.test.mjs` checks the validator, grounding, the gate, injection/escaping defenses, retry/fallback logic (with a fake `fetch`) and the golden fixtures. No API calls.
-- **Golden-set eval (manual, uses API quota)**: `golden/cases.json` has four diffs: a planted inverted-filter bug, a hardcoded password, a clean change, and the same bug with a "tell the reviewer to approve" prompt-injection comment. Each case runs 3 times and asserts *properties* (blocked or not, which file, keywords, verdict not APPROVE), requiring 2 of 3 runs to pass. Run it with `GEMINI_API_KEY=... npm run eval:llm` or Actions → CI/CD → **Run workflow**.
+- **Golden-set eval (manual, uses API quota)**: `golden/cases.json` has four diffs: a planted inverted-filter bug, a hardcoded password, a clean change, and the same bug with a "tell the reviewer to approve" prompt-injection comment. Each case runs 3 times and asserts *properties* (blocked or not, which file, keywords, verdict not APPROVE), requiring 2 of 3 runs to pass. It waits 13 s between calls (override with `EVAL_DELAY_MS`) to respect free-tier rate limits; a 429 `RESOURCE_EXHAUSTED` means you hit the quota, so wait or set `GEMINI_MODEL` to another model. Run it with `GEMINI_API_KEY=... npm run eval:llm` or Actions → CI/CD → **Run workflow**.
 
 ## One-time setup
 
@@ -48,7 +48,7 @@ Known limit: a single model call can still miss a bug or, rarely, raise a verifi
 
 The two Supabase values are required: `src/supabase.ts` throws at startup if they are missing, so a deploy built without them would be a blank page. They are inlined into the public bundle (the anon key is public by design).
 
-Optional repository **variable** `GEMINI_MODEL` to override the default (`gemini-3.8-flash`). The script retries 429/5xx errors 3 times, then falls back to `GEMINI_FALLBACK_MODEL` (default `gemini-3.5-flash-lite`). Free-tier model names and rate limits change; if the review step warns about a 404 or 429, pick a currently free model in AI Studio and set this variable.
+Optional repository **variable** `GEMINI_MODEL` to override the default (`gemini-3.8-flash`). The script retries 429/5xx errors 3 times, then falls back through `GEMINI_FALLBACK_MODEL` (comma-separated list, default `gemini-3.5-flash-lite,gemini-3.6-flash`); a model that fails every attempt is skipped for the rest of an eval run. The log starts with `Models to try, in order: ...`. Free-tier model names and rate limits change; if the review step warns about a 404 or 429, pick a currently free model in AI Studio and set this variable.
 
 ### 2. GitHub `production` environment (recommended)
 Settings → Environments → New environment → `production`. Optionally restrict it to the `main` branch. The deploy job references it.

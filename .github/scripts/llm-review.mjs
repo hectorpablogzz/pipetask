@@ -6,7 +6,7 @@ import { appendFileSync } from 'node:fs'
 
 const MAX_DIFF_CHARS = 60_000
 const apiKey = process.env.GEMINI_API_KEY
-const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
 const base = process.env.BASE_SHA
 const head = process.env.HEAD_SHA
 const summaryFile = process.env.GITHUB_STEP_SUMMARY
@@ -69,7 +69,7 @@ try {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents: [{ role: 'user', parts: [{ text: user }] }],
-        generationConfig: { maxOutputTokens: 4096, temperature: 0.2 },
+        generationConfig: { maxOutputTokens: 8192, temperature: 0.2 },
       }),
       signal: AbortSignal.timeout(120_000),
     },

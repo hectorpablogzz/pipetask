@@ -38,12 +38,12 @@ Settings → Branches → add rule for `main`: require a pull request, require s
 ### 4. Make GitHub Actions the only production deploy path on Netlify
 Netlify's Git integration publishes `main` on every push, bypassing the checks. To stop that while keeping Deploy Previews:
 
-1. Netlify → your site → **Deploys** → **Deploy settings** (Build & deploy → Continuous deployment).
-2. Under **Build status** choose **Stop auto publishing** (not "Stop builds"). Netlify will still build, but `main` builds are no longer published automatically. Deploy Previews for pull requests and branch deploys keep working.
+1. Netlify → your site → **Site configuration** (or Project configuration) → **Build & deploy** → **Continuous deployment** → **Branches and deploy contexts** → **Configure**.
+2. Change **Production branch** from `main` to a branch that does not exist, e.g. `netlify-unused`. Keep **Branch deploys** on **All** and **Deploy Previews** on **Any pull request** so PRs against `main` still get previews. Netlify may build `main` as a branch deploy on a separate URL, but it is never the production deploy.
 3. Under Environment variables, make sure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set so previews work too. Build command `npm run build`, publish directory `dist`.
-4. Stricter alternative: unlink the repository (Continuous deployment → Manage repository → Unlink). This removes PR previews too.
+4. Do **not** use "Lock published deploy" / "Stop auto publishing": a locked production context makes `netlify deploy --prod` fail with `Deployments are "locked" for production context`. (We hit this error.) Unlinking the repository also works but removes PR previews.
 
-Do not skip step 4's check: with auto publishing still on, every push to `main` is deployed by Netlify regardless of CI results.
+Why this works: the CLI deploys to production regardless of branch name, while Netlify's Git integration only publishes its configured production branch.
 
 ## Testing instructions
 
@@ -83,7 +83,7 @@ Close the PR without merging (or merge the fix state only), so `main` never cont
 4. Same PR after the fix: all checks green.
 5. `llm-review` job log with the review text, and the workflow run **Summary** page showing the saved step summary.
 6. Successful `deploy` job log on `main`.
-7. Netlify Deploys page showing the latest production deploy, and the build-settings page with **Stop auto publishing** selected.
+7. Netlify Deploys page showing the latest production deploy, and the **Branches and deploy contexts** page showing the changed production branch.
 8. Branch protection rule with the required check.
 9. The live site on its Netlify URL.
 
